@@ -4,8 +4,8 @@ from datetime import datetime
 import os   # ← 新增这一行！关键修复
 
 # ================== 配置区（从 Railway 环境变量读取） ==================
-TELEGRAM_BOT_TOKEN = os.getenv("8719145480:AAEYIOjhEHTMnf_CxtchAC9EN-czKwMXCTQ")
-TELEGRAM_CHAT_ID = os.getenv("5952064061")
+TELEGRAM_BOT_TOKEN = os.getenv("")
+TELEGRAM_CHAT_ID = os.getenv("")
 
 POLL_INTERVAL = 30
 LPL_SERIES_ID = "10448"
