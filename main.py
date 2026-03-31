@@ -23,6 +23,7 @@ def send_telegram(message: str):
 
 def main():
     print("🚀 LPL 全赛事监控脚本启动！")
+    send_telegram("✅ 测试推送成功！LPL 监控脚本已正常运行 🚀")
     url = f"https://gamma-api.polymarket.com/events?series_id={LPL_SERIES_ID}&active=true&closed=false&limit=100&order=createdAt&ascending=false"
 
     while True:
