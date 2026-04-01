@@ -7,28 +7,48 @@ import os
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-POLL_INTERVAL = 30  # 秒，可改成15更激进
+POLL_INTERVAL = 30
 
-# LPL 队伍关键词（2026赛季常见队伍，已覆盖主流）
+# LPL 队伍（精确单词匹配）
 LPL_TEAMS = [
-    "TES", "BLG", "EDG", "JDG", "LNG", "AL", "WBG", "IG", "OMG",
-    "TT", "WE", "UP", "FPX", "RNG", "Anyone's Legend", "Top Esports",
-    "Bilibili Gaming", "EDward Gaming", "JD Gaming", "Weibo Gaming"
+    "TES", "BLG", "EDG", "JDG", "LNG", "AL", "WBG", "IG", "OMG", "TT", "WE", "UP",
+    "FPX", "RNG", "Anyone's Legend", "Top Esports", "Bilibili Gaming",
+    "EDward Gaming", "JD Gaming", "Weibo Gaming", "LNG", "NIP"
 ]
 
-# 国际赛事关键词（自动捕捉 MSI、Worlds、EWC 等）
-INTERNATIONAL_KEYWORDS = ["MSI", "Worlds", "Esports World Cup", "EWC", "World Championship"]
+# 国际赛事关键词（保留，正常推送）
+INTERNATIONAL_KEYWORDS = ["MSI", "Worlds", "Esports World Cup", "EWC", "World Championship", "Mid-Season"]
+
+# 【核心加强】黑名单：一次性覆盖所有常见无关联赛
+BLACKLIST = [
+    "LCK", "LCK Challengers", "LEC", "LCS", "CBLOL", "LFL", "Prime League",
+    "EMEA Masters", "Circuito Desafiante", "North American", "Challengers League",
+    "Academy", "LJL", "PCS", "LLA", "TCL", "LCL", "Arabian League", "LCO",
+    "Regular Season", "Playoffs"  # 只在非LPL场景下排除，LPL有单独正向匹配
+]
 
 seen_events = set()
 
 def is_lpl_related(title: str) -> bool:
     title_upper = title.upper()
-    # 包含任意 LPL 队伍
-    if any(team.upper() in title_upper for team in LPL_TEAMS):
+    
+    # 第一优先：明确带 "LPL" 的直接通过（最准确）
+    if "LPL" in title_upper:
         return True
-    # 包含国际赛事关键词（这些赛事基本都有 LPL 队伍参与）
-    if any(kw in title for kw in INTERNATIONAL_KEYWORDS):
+    
+    # 第二优先：国际赛事关键词
+    if any(kw.upper() in title_upper for kw in INTERNATIONAL_KEYWORDS):
         return True
+    
+    # 第三优先：精确单词匹配 LPL 队伍
+    words = title_upper.split()
+    if any(team.upper() in words for team in LPL_TEAMS):
+        return True
+    
+    # 最后：黑名单直接排除
+    if any(black.upper() in title_upper for black in BLACKLIST):
+        return False
+    
     return False
 
 def send_telegram(message: str):
@@ -44,13 +64,9 @@ def send_telegram(message: str):
         print(f"❌ Telegram 异常: {e}")
 
 def main():
-    print("🚀 LPL 扩展监控脚本启动！【监控所有有LPL队伍的赛事】")
-    print(f"监控范围：LPL联赛 + MSI + Worlds + Esports World Cup + 所有LPL队伍参赛赛事")
+    print("🚀 LPL 扩展监控脚本启动！【最终加强过滤版 - 已覆盖所有常见无关赛事】")
+    send_telegram("✅ LPL 监控已启动（最终加强过滤版）！\n现在只推送真正有LPL队伍或LPL字样的赛事～")
     
-    # 启动时发一条确认消息
-    send_telegram("✅ LPL 扩展监控已启动！\n现在监控**所有有LPL队伍参加的赛事**（LPL + MSI + Worlds + EWC 等）")
-
-    # 新 URL：拉取所有 LoL 赛事（去掉 series_id，改用 tag_slug）
     url = (
         "https://gamma-api.polymarket.com/events"
         "?tag_slug=league-of-legends"
@@ -74,7 +90,6 @@ def main():
                 title = event.get("title", "未知赛事")
                 slug = event.get("slug", "")
 
-                # 核心过滤：只推送 LPL 相关赛事
                 if event_id and event_id not in seen_events and is_lpl_related(title):
                     link = f"https://polymarket.com/{slug}"
                     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -89,7 +104,7 @@ def main():
                     send_telegram(msg)
                     seen_events.add(event_id)
 
-            if len(seen_events) > 800:
+            if len(seen_events) > 1000:
                 seen_events.clear()
 
         except Exception as e:
